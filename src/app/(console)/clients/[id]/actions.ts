@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getOperator } from "@/lib/server/operator";
+import { requireRole } from "@/lib/server/operator";
 import { supabaseAdmin } from "@/lib/server/supabase-admin";
 
 export interface ActionResult {
@@ -11,8 +11,8 @@ export interface ActionResult {
 
 /** Pause/resume the AI receptionist for a tenant (tenants.ai_paused). */
 export async function toggleAiAction(tenantId: string): Promise<ActionResult> {
-  const op = await getOperator();
-  if (op.status !== "ok") return { ok: false, message: "Not authorized." };
+  const denied = await requireRole("admin");
+  if (denied) return denied;
   const admin = supabaseAdmin();
   if (!admin) return { ok: false, message: "Supabase not configured." };
 

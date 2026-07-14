@@ -34,7 +34,8 @@ export default async function ClientProfilePage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  await requireOperator();
+  const me = await requireOperator();
+  const isAdminPlus = me.role === "owner" || me.role === "admin";
   const { id } = await params;
   const client = await getClient(decodeURIComponent(id));
   if (!client) notFound();
@@ -94,7 +95,7 @@ export default async function ClientProfilePage({
           </div>
         </div>
         <div className="flex-1" />
-        <ProfileActions tenantId={client.id} aiPaused={client.ai === "Paused"} />
+        {isAdminPlus && <ProfileActions tenantId={client.id} aiPaused={client.ai === "Paused"} />}
       </div>
 
       {/* stats strip — real 30-day aggregates from the audit trail */}

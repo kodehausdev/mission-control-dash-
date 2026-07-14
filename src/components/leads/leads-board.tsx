@@ -113,7 +113,7 @@ function NewLeadDialog({ onClose }: { onClose: () => void }) {
   );
 }
 
-function LeadCard({ lead }: { lead: LeadRow }) {
+function LeadCard({ lead, canConvert }: { lead: LeadRow; canConvert: boolean }) {
   const { toast } = useShellUI();
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -184,6 +184,10 @@ function LeadCard({ lead }: { lead: LeadRow }) {
             >
               View client →
             </Link>
+          ) : !canConvert ? (
+            <div className="rounded-md bg-white/4 py-[5px] text-center text-[10.5px] text-faint">
+              Ask an admin to convert
+            </div>
           ) : (
             <button
               disabled={pending}
@@ -220,10 +224,12 @@ export function LeadsBoardView({
   columns,
   pipelineCents,
   demoWinRatePct,
+  canConvert,
 }: {
   columns: BoardColumn[];
   pipelineCents: number;
   demoWinRatePct: number | null;
+  canConvert: boolean;
 }) {
   const [dialogOpen, setDialogOpen] = useState(false);
 
@@ -261,7 +267,7 @@ export function LeadsBoardView({
               </span>
             </div>
             {col.cards.map((lead) => (
-              <LeadCard key={lead.id} lead={lead} />
+              <LeadCard key={lead.id} lead={lead} canConvert={canConvert} />
             ))}
             {col.cards.length === 0 && (
               <div className="rounded-[10px] border border-dashed border-white/8 px-3 py-4 text-center text-[11px] text-ghost">

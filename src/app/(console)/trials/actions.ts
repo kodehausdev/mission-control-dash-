@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getOperator } from "@/lib/server/operator";
+import { requireRole } from "@/lib/server/operator";
 import { supabaseAdmin } from "@/lib/server/supabase-admin";
 
 export interface ActionResult {
@@ -9,9 +9,12 @@ export interface ActionResult {
   message: string;
 }
 
+// Extending/converting a trial is a discretionary business call (giving
+// away free time, marking a deal closed) — admin+ only, same tier as
+// billing actions and client creation.
 async function guard(): Promise<ActionResult | null> {
-  const op = await getOperator();
-  if (op.status !== "ok") return { ok: false, message: "Not authorized." };
+  const denied = await requireRole("admin");
+  if (denied) return denied;
   if (!supabaseAdmin()) return { ok: false, message: "Supabase not configured." };
   return null;
 }

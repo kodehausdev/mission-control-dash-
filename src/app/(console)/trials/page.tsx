@@ -11,7 +11,8 @@ export const dynamic = "force-dynamic";
 const GRID = "grid grid-cols-[1.5fr_90px_110px_130px_110px_130px_170px] gap-2";
 
 export default async function TrialsPage() {
-  await requireOperator();
+  const me = await requireOperator();
+  const isAdminPlus = me.role === "owner" || me.role === "admin";
   const [clients, settings] = await Promise.all([listClients(), getWorkspaceSettings()]);
 
   const trials = clients
@@ -102,7 +103,11 @@ export default async function TrialsPage() {
             <span>
               <Badge tone={t.likelyTone}>{t.likely}</Badge>
             </span>
-            <TrialActions tenantId={t.id} />
+            {isAdminPlus ? (
+              <TrialActions tenantId={t.id} />
+            ) : (
+              <span className="text-right text-[11px] text-faint">—</span>
+            )}
           </div>
         ))}
       </div>

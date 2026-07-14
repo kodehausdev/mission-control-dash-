@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getOperator } from "@/lib/server/operator";
+import { requireRole } from "@/lib/server/operator";
 import { stripe } from "@/lib/server/stripe";
 import { getBillingData, invalidateBillingCache } from "@/lib/server/billing";
 
@@ -11,8 +11,8 @@ export interface ActionResult {
 }
 
 export async function retryInvoiceAction(invoiceId: string): Promise<ActionResult> {
-  const op = await getOperator();
-  if (op.status !== "ok") return { ok: false, message: "Not authorized." };
+  const denied = await requireRole("admin");
+  if (denied) return denied;
   const s = stripe();
   if (!s) return { ok: false, message: "Stripe not configured." };
 
@@ -32,8 +32,8 @@ export async function retryInvoiceAction(invoiceId: string): Promise<ActionResul
 }
 
 export async function retryAllFailedAction(): Promise<ActionResult> {
-  const op = await getOperator();
-  if (op.status !== "ok") return { ok: false, message: "Not authorized." };
+  const denied = await requireRole("admin");
+  if (denied) return denied;
   const s = stripe();
   if (!s) return { ok: false, message: "Stripe not configured." };
 

@@ -105,3 +105,28 @@ export async function requireOperator(): Promise<Operator> {
         : "/login"
   );
 }
+
+const ROLE_RANK: Record<string, number> = { operator: 0, admin: 1, owner: 2 };
+
+/**
+ * Server-action permission check. Roles previously existed as labels only —
+ * every action just checked "is this a signed-in operator," regardless of
+ * tier. Call this at the top of any action that shouldn't be available to
+ * the base "operator" role; returns null when allowed, or a denial object
+ * shaped like every action file's local ActionResult ({ok:false,message})
+ * to `return` directly.
+ */
+export async function requireRole(
+  minRole: "admin" | "owner"
+): Promise<{ ok: false; message: string } | null> {
+  const res = await getOperator();
+  if (res.status !== "ok") return { ok: false, message: "Not authorized." };
+  const rank = ROLE_RANK[res.operator.role] ?? 0;
+  if (rank < ROLE_RANK[minRole]) {
+    return {
+      ok: false,
+      message: minRole === "owner" ? "Only the owner can do this." : "Only admins and owners can do this.",
+    };
+  }
+  return null;
+}

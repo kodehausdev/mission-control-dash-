@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getOperator } from "@/lib/server/operator";
+import { getOperator, requireRole } from "@/lib/server/operator";
 import { supabaseAdmin } from "@/lib/server/supabase-admin";
 import { STAGES, type Stage } from "@/lib/server/leads";
 import { createTenant } from "@/lib/server/clients";
@@ -74,7 +74,7 @@ export async function moveLeadAction(id: number, stage: Stage): Promise<ActionRe
  * `tenants` directly without going through leads at all.
  */
 export async function convertLeadToClientAction(id: number): Promise<ActionResult> {
-  const denied = await guard();
+  const denied = await requireRole("admin");
   if (denied) return denied;
   const admin = supabaseAdmin()!;
 

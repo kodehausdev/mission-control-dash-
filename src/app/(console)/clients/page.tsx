@@ -25,7 +25,8 @@ export default async function ClientsPage({
 }: {
   searchParams: Promise<{ filter?: string }>;
 }) {
-  await requireOperator();
+  const me = await requireOperator();
+  const isAdminPlus = me.role === "owner" || me.role === "admin";
   const { filter: rawFilter } = await searchParams;
   const filter: FilterId = (FILTERS.find((f) => f.id === rawFilter)?.id ?? "all") as FilterId;
 
@@ -62,7 +63,9 @@ export default async function ClientsPage({
             {f.label}
           </Link>
         ))}
-        <NewClientButton plans={plans} defaultTrialDays={settings.defaultTrialDays} />
+        {isAdminPlus && (
+          <NewClientButton plans={plans} defaultTrialDays={settings.defaultTrialDays} />
+        )}
       </div>
 
       <div className="overflow-auto rounded-xl border border-white/6 bg-card shadow-[0_1px_2px_rgba(0,0,0,.35)]">

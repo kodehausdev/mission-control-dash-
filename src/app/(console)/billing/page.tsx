@@ -18,7 +18,8 @@ const STATUS_TONE: Record<string, Tone> = {
 };
 
 export default async function BillingPage() {
-  await requireOperator();
+  const me = await requireOperator();
+  const isAdminPlus = me.role === "owner" || me.role === "admin";
   const [{ summary, invoices, failed }, clients] = await Promise.all([
     getBillingData(),
     listClients(),
@@ -162,15 +163,17 @@ export default async function BillingPage() {
                   </div>
                 </div>
                 <span className="font-mono text-xs text-red">{moneyExact(fp.amountCents)}</span>
-                <RetryButton invoiceId={fp.invoiceId} />
+                {isAdminPlus && <RetryButton invoiceId={fp.invoiceId} />}
               </div>
             ))}
           </Card>
 
-          <Card className="px-4 py-[15px]">
-            <div className="mb-[11px] text-[13px] font-semibold">Quick actions</div>
-            <QuickActions />
-          </Card>
+          {isAdminPlus && (
+            <Card className="px-4 py-[15px]">
+              <div className="mb-[11px] text-[13px] font-semibold">Quick actions</div>
+              <QuickActions />
+            </Card>
+          )}
 
           <Card>
             <CardHeader title="Trials ending — convert now" />

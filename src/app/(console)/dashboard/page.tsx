@@ -87,12 +87,14 @@ export default async function DashboardPage() {
           >
             Add lead
           </Link>
-          <Link
-            href="/clients?new=1"
-            className="cursor-pointer rounded-lg bg-accent px-3 py-[6px] text-xs font-semibold !text-white shadow-[0_2px_10px_rgba(108,92,231,.35)] hover:bg-accent-hi"
-          >
-            New client
-          </Link>
+          {(operator.role === "owner" || operator.role === "admin") && (
+            <Link
+              href="/clients?new=1"
+              className="cursor-pointer rounded-lg bg-accent px-3 py-[6px] text-xs font-semibold !text-white shadow-[0_2px_10px_rgba(108,92,231,.35)] hover:bg-accent-hi"
+            >
+              New client
+            </Link>
+          )}
         </div>
       </div>
 

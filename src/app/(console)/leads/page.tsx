@@ -5,7 +5,8 @@ import { LeadsBoardView } from "@/components/leads/leads-board";
 export const dynamic = "force-dynamic";
 
 export default async function LeadsPage() {
-  await requireOperator();
+  const me = await requireOperator();
+  const isAdminPlus = me.role === "owner" || me.role === "admin";
   const board = await getLeadsBoard();
 
   return (
@@ -14,6 +15,7 @@ export default async function LeadsPage() {
         columns={board.columns}
         pipelineCents={board.pipelineCents}
         demoWinRatePct={board.demoWinRatePct}
+        canConvert={isAdminPlus}
       />
     </div>
   );
