@@ -78,6 +78,50 @@ export async function updateMyNameAction(displayName: string): Promise<ActionRes
   return { ok: true, message: "Name updated" };
 }
 
+const ROLES = ["owner", "admin", "operator"] as const;
+
+export async function updateOperatorRoleAction(
+  targetUserId: string,
+  newRole: string
+): Promise<ActionResult> {
+  const me = await getOperator();
+  if (me.status !== "ok") return { ok: false, message: "Not authorized." };
+  if (me.operator.role !== "owner") {
+    return { ok: false, message: "Only owners can change roles." };
+  }
+  if (!ROLES.includes(newRole as (typeof ROLES)[number])) {
+    return { ok: false, message: "Unknown role." };
+  }
+  const admin = supabaseAdmin();
+  if (!admin) return { ok: false, message: "Supabase not configured." };
+
+  if (newRole !== "owner") {
+    const { data: target } = await admin
+      .from("operators")
+      .select("role")
+      .eq("user_id", targetUserId)
+      .maybeSingle();
+    if (target?.role === "owner") {
+      const { count } = await admin
+        .from("operators")
+        .select("user_id", { count: "exact", head: true })
+        .eq("role", "owner");
+      if ((count ?? 0) <= 1) {
+        return { ok: false, message: "Can't demote the last owner." };
+      }
+    }
+  }
+
+  const { error } = await admin
+    .from("operators")
+    .update({ role: newRole })
+    .eq("user_id", targetUserId);
+  if (error) return { ok: false, message: `Update failed: ${error.message}` };
+
+  revalidatePath("/settings");
+  return { ok: true, message: `Role updated to ${newRole}` };
+}
+
 export async function inviteOperatorAction(input: {
   email: string;
   displayName?: string;

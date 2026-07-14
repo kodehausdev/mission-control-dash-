@@ -7,6 +7,7 @@ import {
   inviteOperatorAction,
   toggleAlertAction,
   updateMyNameAction,
+  updateOperatorRoleAction,
   updateWorkspaceAction,
 } from "@/app/(console)/settings/actions";
 
@@ -175,6 +176,42 @@ export function EditableSelfName({ initialName }: { initialName: string }) {
       }}
       className="rounded-[6px] border border-accent/40 bg-field px-2 py-[2px] text-[12.5px] text-fg outline-none disabled:opacity-60"
     />
+  );
+}
+
+const ROLE_OPTIONS = ["owner", "admin", "operator"] as const;
+
+export function RoleSelect({
+  userId,
+  role,
+}: {
+  userId: string;
+  role: string;
+}) {
+  const { toast } = useShellUI();
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+
+  return (
+    <select
+      value={role}
+      disabled={pending}
+      onChange={(e) => {
+        const newRole = e.target.value;
+        startTransition(async () => {
+          const res = await updateOperatorRoleAction(userId, newRole);
+          toast(res.message);
+          router.refresh();
+        });
+      }}
+      className="cursor-pointer rounded-[6px] border border-white/10 bg-field px-2 py-[3px] text-[11px] font-semibold text-mid outline-none disabled:opacity-60"
+    >
+      {ROLE_OPTIONS.map((r) => (
+        <option key={r} value={r}>
+          {r.charAt(0).toUpperCase() + r.slice(1)}
+        </option>
+      ))}
+    </select>
   );
 }
 

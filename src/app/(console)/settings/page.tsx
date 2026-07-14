@@ -6,6 +6,7 @@ import {
   AlertToggle,
   EditableSelfName,
   InviteMemberButton,
+  RoleSelect,
   WorkspaceForm,
 } from "@/components/settings/settings-ui";
 import { initials, money } from "@/lib/format";
@@ -136,9 +137,13 @@ export default async function SettingsPage() {
                 <div className="text-[11px] text-muted">{member.email ?? "—"}</div>
               </div>
               {pending && <Badge tone="amber">Pending</Badge>}
-              <Badge tone={member.role === "owner" ? "purple" : "neutral"}>
-                {member.role.charAt(0).toUpperCase() + member.role.slice(1)}
-              </Badge>
+              {me.role === "owner" ? (
+                <RoleSelect userId={member.user_id} role={member.role} />
+              ) : (
+                <Badge tone={member.role === "owner" ? "purple" : "neutral"}>
+                  {member.role.charAt(0).toUpperCase() + member.role.slice(1)}
+                </Badge>
+              )}
             </div>
           );
         })}
