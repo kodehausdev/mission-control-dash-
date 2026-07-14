@@ -47,6 +47,19 @@ export async function sendEmail(opts: {
   }
 }
 
+// Interpolating raw values (the Supabase action link especially — its query
+// string has unescaped `&` separating token/type/redirect_to) straight into
+// HTML broke real invite links on at least one mobile mail client. Escape
+// everything that lands in the template.
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 function shell(preheader: string, bodyHtml: string): string {
   return `<!doctype html>
 <html>
@@ -71,14 +84,16 @@ function shell(preheader: string, bodyHtml: string): string {
 }
 
 export function operatorInviteEmail(actionLink: string, workspaceName: string) {
+  const safeLink = escapeHtml(actionLink);
+  const safeName = escapeHtml(workspaceName);
   const html = shell(
-    `You've been invited to ${workspaceName}`,
-    `<p style="color:#ECECF1;font-size:15px;font-weight:600;margin:0 0 8px;">You're invited to ${workspaceName}</p>
+    `You've been invited to ${safeName}`,
+    `<p style="color:#ECECF1;font-size:15px;font-weight:600;margin:0 0 8px;">You're invited to ${safeName}</p>
      <p style="color:#9494A6;font-size:13px;line-height:1.6;margin:0 0 20px;">
        Someone on the team added you as an operator on Mission Control. Click below to set your
        password and get in.
      </p>
-     <a href="${actionLink}" style="display:inline-block;background:#6C5CE7;color:#fff;text-decoration:none;font-size:13px;font-weight:600;padding:10px 18px;border-radius:8px;">
+     <a href="${safeLink}" style="display:inline-block;background:#6C5CE7;color:#fff;text-decoration:none;font-size:13px;font-weight:600;padding:10px 18px;border-radius:8px;">
        Accept invite &amp; set password
      </a>
      <p style="color:#55555F;font-size:11px;margin:20px 0 0;">This link expires soon and can only be used once.</p>`
@@ -88,14 +103,16 @@ export function operatorInviteEmail(actionLink: string, workspaceName: string) {
 }
 
 export function operatorAccessLinkEmail(actionLink: string, workspaceName: string) {
+  const safeLink = escapeHtml(actionLink);
+  const safeName = escapeHtml(workspaceName);
   const html = shell(
-    `Set your ${workspaceName} password`,
+    `Set your ${safeName} password`,
     `<p style="color:#ECECF1;font-size:15px;font-weight:600;margin:0 0 8px;">Set your password</p>
      <p style="color:#9494A6;font-size:13px;line-height:1.6;margin:0 0 20px;">
-       You have an operator account on ${workspaceName}'s Mission Control, but no password set yet.
+       You have an operator account on ${safeName}'s Mission Control, but no password set yet.
        Click below to choose one and get in.
      </p>
-     <a href="${actionLink}" style="display:inline-block;background:#6C5CE7;color:#fff;text-decoration:none;font-size:13px;font-weight:600;padding:10px 18px;border-radius:8px;">
+     <a href="${safeLink}" style="display:inline-block;background:#6C5CE7;color:#fff;text-decoration:none;font-size:13px;font-weight:600;padding:10px 18px;border-radius:8px;">
        Set password &amp; continue
      </a>
      <p style="color:#55555F;font-size:11px;margin:20px 0 0;">This link expires soon and can only be used once.</p>`
