@@ -1,10 +1,10 @@
 "use server";
 
-import { createClient } from "@supabase/supabase-js";
 import { revalidatePath } from "next/cache";
 import { getOperator } from "@/lib/server/operator";
 import { supabaseAdmin } from "@/lib/server/supabase-admin";
 import { invalidateSettingsCache, getWorkspaceSettings } from "@/lib/server/settings";
+import { operatorAccessLinkEmail, operatorInviteEmail, sendEmail } from "@/lib/server/email";
 
 export interface ActionResult {
   ok: boolean;
@@ -137,29 +137,35 @@ export async function inviteOperatorAction(input: {
     ? input.role!
     : "operator";
 
-  // Invite via Supabase Auth (sends an email when SMTP is configured) —
-  // the link lands on /accept-invite, which lets them set their own
-  // password before entering the console.
+  // Mission Control sends its own email via Resend instead of letting
+  // Supabase's built-in mailer handle it — that mailer is rate-limited and
+  // was unreliable in practice (see the incident notes on operator.ts).
+  // generateLink() only ever returns a token; it never sends anything.
   const appUrl = process.env.APP_URL ?? "http://localhost:3002";
   const redirectTo = `${appUrl}/accept-invite`;
+  const settings = await getWorkspaceSettings();
   let userId: string | null = null;
   let emailAction: "invited" | "reset-sent" | "already-joined" = "invited";
+  let actionLink: string | null = null;
 
-  const { data: invited, error: inviteError } = await admin.auth.admin.inviteUserByEmail(email, {
-    redirectTo,
+  const { data: inviteLink, error: inviteError } = await admin.auth.admin.generateLink({
+    type: "invite",
+    email,
+    options: { redirectTo },
   });
 
-  if (invited?.user) {
-    userId = invited.user.id;
-  } else if (inviteError) {
-    // inviteUserByEmail refuses once *any* auth account exists for this
-    // email — including a stale, never-completed one (see the joined_at
-    // note above). Link the existing account, and if they've never
-    // actually finished setting a password, send a real usable link
-    // instead of silently doing nothing (the original bug here).
+  if (inviteLink?.user) {
+    userId = inviteLink.user.id;
+    actionLink = inviteLink.properties.action_link;
+  } else {
+    // generateLink({type:'invite'}) refuses once *any* auth account exists
+    // for this email — including a stale, never-completed one (see the
+    // joined_at note above). Link the existing account, and if they've
+    // never actually finished setting a password, generate a real
+    // recovery link instead of silently doing nothing (the original bug).
     const { data: list } = await admin.auth.admin.listUsers({ page: 1, perPage: 200 });
     userId = list?.users.find((u) => u.email?.toLowerCase() === email)?.id ?? null;
-    if (!userId) return { ok: false, message: `Invite failed: ${inviteError.message}` };
+    if (!userId) return { ok: false, message: `Invite failed: ${inviteError?.message}` };
 
     const { data: existingOp } = await admin
       .from("operators")
@@ -170,15 +176,34 @@ export async function inviteOperatorAction(input: {
     if (existingOp?.joined_at) {
       emailAction = "already-joined";
     } else {
-      const anonUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-      const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-      if (anonUrl && anonKey) {
-        const anon = createClient(anonUrl, anonKey, { auth: { persistSession: false } });
-        const { error: resetErr } = await anon.auth.resetPasswordForEmail(email, { redirectTo });
-        if (resetErr) return { ok: false, message: `Could not send access link: ${resetErr.message}` };
+      const { data: recoveryLink, error: recoveryError } = await admin.auth.admin.generateLink({
+        type: "recovery",
+        email,
+        options: { redirectTo },
+      });
+      if (recoveryError || !recoveryLink) {
+        return { ok: false, message: `Could not generate access link: ${recoveryError?.message}` };
       }
+      actionLink = recoveryLink.properties.action_link;
       emailAction = "reset-sent";
     }
+  }
+
+  if (actionLink) {
+    const { html, text } =
+      emailAction === "invited"
+        ? operatorInviteEmail(actionLink, settings.workspaceName)
+        : operatorAccessLinkEmail(actionLink, settings.workspaceName);
+    const sent = await sendEmail({
+      to: email,
+      subject:
+        emailAction === "invited"
+          ? `You're invited to ${settings.workspaceName}`
+          : `Set your ${settings.workspaceName} password`,
+      html,
+      text,
+    });
+    if (!sent.ok) return { ok: false, message: `Email failed to send: ${sent.error}` };
   }
 
   const { error } = await admin.from("operators").upsert({
