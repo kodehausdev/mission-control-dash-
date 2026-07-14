@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, useTransition, type FormEvent } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useShellUI } from "@/components/shell/shell-ui";
 import {
+  convertLeadToClientAction,
   createLeadAction,
   deleteLeadAction,
   moveLeadAction,
@@ -134,6 +136,17 @@ function LeadCard({ lead }: { lead: LeadRow }) {
       router.refresh();
     });
 
+  const convert = () =>
+    startTransition(async () => {
+      const res = await convertLeadToClientAction(lead.id);
+      toast(res.message);
+      if (res.ok && res.id) {
+        router.push(`/clients/${encodeURIComponent(res.id)}`);
+      } else {
+        router.refresh();
+      }
+    });
+
   return (
     <div
       className={`group rounded-[10px] border border-white/6 bg-card px-[13px] py-[11px] shadow-[0_1px_2px_rgba(0,0,0,.35)] hover:border-accent/45 ${pending ? "opacity-60" : ""}`}
@@ -161,6 +174,28 @@ function LeadCard({ lead }: { lead: LeadRow }) {
         <span className="flex-1" />
         <span className="font-mono text-[10.5px] text-faint">{timeShort(lead.updatedAt)}</span>
       </div>
+
+      {lead.stage === "won" && (
+        <div className="mt-[9px]">
+          {lead.tenantId ? (
+            <Link
+              href={`/clients/${encodeURIComponent(lead.tenantId)}`}
+              className="block w-full cursor-pointer rounded-md bg-green/12 py-[5px] text-center text-[10.5px] font-semibold text-green hover:bg-green/22"
+            >
+              View client →
+            </Link>
+          ) : (
+            <button
+              disabled={pending}
+              onClick={convert}
+              className="w-full cursor-pointer rounded-md bg-green/15 py-[5px] text-[10.5px] font-semibold text-green hover:bg-green/26 disabled:opacity-50"
+            >
+              {pending ? "Converting…" : "Convert to client"}
+            </button>
+          )}
+        </div>
+      )}
+
       <div className="mt-2 hidden justify-between gap-1 group-hover:flex">
         <button
           disabled={!prev || pending}

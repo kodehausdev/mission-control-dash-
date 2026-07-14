@@ -33,6 +33,7 @@ export interface LeadRow {
   stage: Stage;
   phone: string | null;
   email: string | null;
+  tenantId: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -49,7 +50,7 @@ export async function getLeadsBoard(): Promise<LeadsBoard> {
   if (admin) {
     const { data } = await admin
       .from("leads")
-      .select("id, business, owner_name, industry, note, value_cents, stage, phone, email, created_at, updated_at")
+      .select("id, business, owner_name, industry, note, value_cents, stage, phone, email, tenant_id, created_at, updated_at")
       .order("updated_at", { ascending: false })
       .limit(300);
     for (const l of data ?? []) {
@@ -63,6 +64,7 @@ export async function getLeadsBoard(): Promise<LeadsBoard> {
         stage: (STAGES as readonly string[]).includes(l.stage) ? (l.stage as Stage) : "new",
         phone: l.phone,
         email: l.email,
+        tenantId: l.tenant_id,
         createdAt: l.created_at,
         updatedAt: l.updated_at,
       });

@@ -281,3 +281,55 @@ export async function getClient(id: string): Promise<ClientRow | null> {
   if (tenants.length === 0) return null;
   return decorate(tenants[0], activity, engineUp, settings.planPrices);
 }
+
+function slugify(business: string): string {
+  const base = business
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 40);
+  const suffix = Math.random().toString(36).slice(2, 6);
+  return `${base || "client"}-${suffix}`;
+}
+
+/**
+ * Inserts a tenant row. Shared by the "New client" dialog and lead
+ * conversion — both are hand-provisioned by the agency (not self-serve), so
+ * both start live_active with numbers/billing configured out of band.
+ */
+export async function createTenant(
+  admin: SupabaseAdminClient,
+  input: {
+    business: string;
+    industry?: string;
+    ownerName?: string;
+    ownerEmail?: string;
+    phone?: string;
+    plan: string;
+    status: "trial" | "active";
+    trialDays?: number;
+  }
+): Promise<{ ok: true; id: string } | { ok: false; message: string }> {
+  const business = input.business.trim();
+  if (!business) return { ok: false, message: "Business name is required." };
+
+  const id = slugify(business);
+  const trialEndsAt =
+    input.status === "trial"
+      ? new Date(Date.now() + Math.max(1, input.trialDays ?? 14) * 86_400_000).toISOString()
+      : null;
+
+  const { error } = await admin.from("tenants").insert({
+    id,
+    lab_name: business,
+    industry: input.industry?.trim() || null,
+    owner_name: input.ownerName?.trim() || null,
+    owner_email: input.ownerEmail?.trim() || null,
+    twilio_number: input.phone?.trim() || null,
+    plan: input.plan,
+    trial_ends_at: trialEndsAt,
+    onboarding_state: "live_active",
+  });
+  if (error) return { ok: false, message: `Create failed: ${error.message}` };
+  return { ok: true, id };
+}

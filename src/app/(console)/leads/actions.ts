@@ -4,10 +4,12 @@ import { revalidatePath } from "next/cache";
 import { getOperator } from "@/lib/server/operator";
 import { supabaseAdmin } from "@/lib/server/supabase-admin";
 import { STAGES, type Stage } from "@/lib/server/leads";
+import { createTenant } from "@/lib/server/clients";
 
 export interface ActionResult {
   ok: boolean;
   message: string;
+  id?: string;
 }
 
 async function guard(): Promise<ActionResult | null> {
@@ -63,6 +65,49 @@ export async function moveLeadAction(id: number, stage: Stage): Promise<ActionRe
 
   revalidatePath("/leads");
   return { ok: true, message: `${data?.business ?? "Lead"} moved` };
+}
+
+/**
+ * Converts a Won lead into a real client — reuses the same tenant-creation
+ * path as the "New client" dialog so the two never drift apart. Leads move
+ * through the pipeline manually; self-serve signups already land in
+ * `tenants` directly without going through leads at all.
+ */
+export async function convertLeadToClientAction(id: number): Promise<ActionResult> {
+  const denied = await guard();
+  if (denied) return denied;
+  const admin = supabaseAdmin()!;
+
+  const { data: lead, error: fetchError } = await admin
+    .from("leads")
+    .select("business, owner_name, industry, email, phone, value_cents, stage, tenant_id")
+    .eq("id", id)
+    .maybeSingle();
+  if (fetchError || !lead) return { ok: false, message: "Lead not found." };
+  if (lead.stage !== "won") return { ok: false, message: "Only Won leads can convert to a client." };
+  if (lead.tenant_id) return { ok: false, message: "This lead is already linked to a client." };
+
+  const result = await createTenant(admin, {
+    business: lead.business,
+    industry: lead.industry ?? undefined,
+    ownerName: lead.owner_name ?? undefined,
+    ownerEmail: lead.email ?? undefined,
+    phone: lead.phone ?? undefined,
+    plan: "starter",
+    status: "active", // Won means the deal is closed, not a trial
+  });
+  if (!result.ok) return result;
+
+  const { error: linkError } = await admin
+    .from("leads")
+    .update({ tenant_id: result.id, updated_at: new Date().toISOString() })
+    .eq("id", id);
+  if (linkError) return { ok: false, message: `Client created but linking the lead failed: ${linkError.message}` };
+
+  revalidatePath("/leads");
+  revalidatePath("/clients");
+  revalidatePath("/dashboard");
+  return { ok: true, message: `${lead.business} converted to a client`, id: result.id };
 }
 
 export async function deleteLeadAction(id: number): Promise<ActionResult> {
