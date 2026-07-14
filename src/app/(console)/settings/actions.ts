@@ -18,12 +18,24 @@ async function guard(): Promise<ActionResult | null> {
   return null;
 }
 
+/** Workspace config, alerts, and team management are admin+ only — plain
+ * operators can see/change their own name but nothing else in Settings. */
+async function guardAdmin(): Promise<ActionResult | null> {
+  const denied = await guard();
+  if (denied) return denied;
+  const op = await getOperator();
+  if (op.status === "ok" && op.operator.role === "operator") {
+    return { ok: false, message: "Only admins and owners can do this." };
+  }
+  return null;
+}
+
 export async function updateWorkspaceAction(input: {
   workspaceName: string;
   companyName: string;
   defaultTrialDays: number;
 }): Promise<ActionResult> {
-  const denied = await guard();
+  const denied = await guardAdmin();
   if (denied) return denied;
 
   const { error } = await supabaseAdmin()!
@@ -43,7 +55,7 @@ export async function updateWorkspaceAction(input: {
 }
 
 export async function toggleAlertAction(key: string, on: boolean): Promise<ActionResult> {
-  const denied = await guard();
+  const denied = await guardAdmin();
   if (denied) return denied;
 
   const current = await getWorkspaceSettings();
@@ -127,7 +139,7 @@ export async function inviteOperatorAction(input: {
   displayName?: string;
   role?: string;
 }): Promise<ActionResult> {
-  const denied = await guard();
+  const denied = await guardAdmin();
   if (denied) return denied;
   const admin = supabaseAdmin()!;
 

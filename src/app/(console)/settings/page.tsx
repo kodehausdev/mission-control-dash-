@@ -31,6 +31,23 @@ interface OperatorRow {
 
 export default async function SettingsPage() {
   const me = await requireOperator();
+  const isAdminPlus = me.role === "owner" || me.role === "admin";
+
+  if (!isAdminPlus) {
+    return (
+      <div className="flex max-w-[820px] flex-col gap-[14px] px-[26px] pb-8 pt-[22px]">
+        <PageHeader title="Settings" subtitle="Your profile" />
+        <Card className="flex flex-col gap-3 px-[18px] py-4">
+          <div className="text-[13px] font-semibold">Your name</div>
+          <EditableSelfName initialName={me.name} />
+          <div className="text-[11px] leading-[1.5] text-faint">
+            Workspace configuration and team management are visible to admins and owners only.
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
   const settings = await getWorkspaceSettings();
 
   const admin = supabaseAdmin();
