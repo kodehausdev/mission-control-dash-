@@ -82,9 +82,11 @@ function SectionLabel({ children, first }: { children: React.ReactNode; first?: 
 export function Sidebar({
   counts,
   operator,
+  workspaceName,
 }: {
   counts: SidebarCounts;
   operator: OperatorInfo;
+  workspaceName: string;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -106,7 +108,7 @@ export function Sidebar({
         </div>
         <div className="flex flex-col">
           <span className="text-[13px] font-semibold tracking-[-.01em]">{BRANDING.product}</span>
-          <span className="text-[10px] text-faint">{BRANDING.workspace}</span>
+          <span className="text-[10px] text-faint">{workspaceName}</span>
         </div>
       </div>
 

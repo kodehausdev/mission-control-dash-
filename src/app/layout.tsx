@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { BRANDING } from "@/lib/branding";
+import { getWorkspaceSettings } from "@/lib/server/settings";
 
 const geist = Geist({
   variable: "--font-geist",
@@ -15,11 +16,14 @@ const geistMono = Geist_Mono({
   weight: ["400", "500", "600"],
 });
 
-export const metadata: Metadata = {
-  title: `${BRANDING.product} — ${BRANDING.workspace}`,
-  description:
-    "Agency operations console — clients, leads, trials, billing, support, and AI health across every tenant.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await getWorkspaceSettings();
+  return {
+    title: `${BRANDING.product} — ${settings.workspaceName}`,
+    description:
+      "Agency operations console — clients, leads, trials, billing, support, and AI health across every tenant.",
+  };
+}
 
 export default function RootLayout({
   children,

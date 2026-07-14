@@ -4,7 +4,10 @@
 
 import "server-only";
 
-const ENGINE_URL = process.env.ENGINE_URL ?? "http://localhost:3000";
+// Trailing slash stripped defensively — easy to paste one into a Vercel env
+// var, and it'd otherwise turn every request into a double-slash path that
+// most servers (Express included) won't route-match.
+export const ENGINE_URL = (process.env.ENGINE_URL ?? "http://localhost:3000").replace(/\/+$/, "");
 
 export interface EngineState {
   tenant: { id: string; lab_name: string };

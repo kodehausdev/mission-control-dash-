@@ -1,5 +1,6 @@
 import { requireOperator } from "@/lib/server/operator";
 import { getNotifications, getShellCounts, getSystemStatus } from "@/lib/server/shell";
+import { getWorkspaceSettings } from "@/lib/server/settings";
 import { Sidebar } from "@/components/shell/sidebar";
 import { Topbar } from "@/components/shell/topbar";
 import { ShellUIProvider } from "@/components/shell/shell-ui";
@@ -13,10 +14,11 @@ export default async function ConsoleLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   const operator = await requireOperator();
-  const [counts, system, notifications] = await Promise.all([
+  const [counts, system, notifications, settings] = await Promise.all([
     getShellCounts(),
     getSystemStatus(),
     getNotifications(),
+    getWorkspaceSettings(),
   ]);
 
   return (
@@ -25,6 +27,7 @@ export default async function ConsoleLayout({
         <Sidebar
           counts={counts}
           operator={{ name: operator.name, role: operator.roleLabel }}
+          workspaceName={settings.workspaceName}
         />
         <div className="flex min-w-0 flex-1 flex-col">
           <Topbar system={system} hasUnread={notifications.length > 0} />

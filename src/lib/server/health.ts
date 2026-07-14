@@ -5,6 +5,7 @@
 import "server-only";
 import { supabaseAdmin } from "./supabase-admin";
 import { stripe } from "./stripe";
+import { ENGINE_URL } from "./engine";
 
 export type ServiceState = "operational" | "degraded" | "down" | "unconfigured";
 
@@ -16,7 +17,6 @@ export interface ServiceStatus {
   note: string;
 }
 
-const ENGINE_URL = process.env.ENGINE_URL ?? "http://localhost:3000";
 const DEGRADED_MS = 1200;
 
 async function timed<T>(fn: () => Promise<T>): Promise<{ ms: number; ok: boolean }> {
