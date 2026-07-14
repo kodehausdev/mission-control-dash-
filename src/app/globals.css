@@ -1,0 +1,104 @@
+@import "tailwindcss";
+
+/*
+ * Mission Control design tokens — extracted from the Claude Design handoff
+ * (Mission Control.dc.html). Dark-only UI.
+ */
+@theme inline {
+  --font-sans: var(--font-geist), system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  /* surfaces */
+  --color-bg: #0d0d12;
+  --color-raised: #111117;
+  --color-card: #15151c;
+  --color-field: #16161d;
+  --color-pop: #17171f;
+  --color-toast: #1d1d26;
+  --color-scrollbar: #26262f;
+
+  /* text ramp (bright → dim) */
+  --color-fg: #ececf1;
+  --color-mid: #c9c9d4;
+  --color-body: #b9b9c6;
+  --color-soft: #9494a6;
+  --color-mono-soft: #8b8b99;
+  --color-muted: #7a7a89;
+  --color-faint: #62626f;
+  --color-ghost: #55555f;
+  --color-label: #4e4e5a;
+  --color-slash: #3a3a45;
+
+  /* brand + status */
+  --color-accent: #6c5ce7;
+  --color-accent-hi: #7b6cf0;
+  --color-accent-deep: #4a3fb8;
+  --color-lav: #a99dff;
+  --color-link: #8a7cff;
+  --color-green: #3dd68c;
+  --color-amber: #e5a63b;
+  --color-amber-soft: #e8c989;
+  --color-amber-bright: #f0d9a8;
+  --color-amber-dim: #8a7448;
+  --color-red: #f2555a;
+  --color-red-soft: #f2938f;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--color-bg);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+a {
+  color: var(--color-link);
+  text-decoration: none;
+}
+a:hover {
+  color: var(--color-lav);
+}
+
+input,
+button {
+  font-family: inherit;
+}
+input:focus {
+  outline: none;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-scrollbar);
+  border-radius: 6px;
+  border: 3px solid var(--color-bg);
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::selection {
+  background: rgba(108, 92, 231, 0.35);
+}
+
+@keyframes mc-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+.mc-pulse {
+  animation: mc-pulse 2.4s infinite;
+}
+.mc-pulse-fast {
+  animation: mc-pulse 2s infinite;
+}
