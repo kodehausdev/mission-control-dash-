@@ -2,7 +2,7 @@ import Link from "next/link";
 import { requireOperator } from "@/lib/server/operator";
 import { listClients } from "@/lib/server/clients";
 import { getBillingData } from "@/lib/server/billing";
-import { bookingsLeaderboard, listFeed, todayCounters } from "@/lib/server/activity";
+import { bookingsLeaderboard, listFeed, recentEmergencies, todayCounters } from "@/lib/server/activity";
 import { engineHealthy } from "@/lib/server/engine";
 import {
   Card,
@@ -15,6 +15,7 @@ import {
 } from "@/components/ui";
 import { LiveFeed } from "@/components/dashboard/live-feed";
 import { AlertBanner } from "@/components/dashboard/alert-banner";
+import { EmergencyBanner } from "@/components/dashboard/emergency-banner";
 import { daysUntil, initials, money, plural } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -31,13 +32,14 @@ function countNewThisWeek(createdAts: string[]): number {
 
 export default async function DashboardPage() {
   const operator = await requireOperator();
-  const [clients, billing, today, feed, leaders, engineUp] = await Promise.all([
+  const [clients, billing, today, feed, leaders, engineUp, emergencies] = await Promise.all([
     listClients(),
     getBillingData(),
     todayCounters(),
     listFeed(10),
     bookingsLeaderboard(7),
     engineHealthy(),
+    recentEmergencies(24),
   ]);
 
   const newThisWeek = countNewThisWeek(clients.map((c) => c.createdAt));
@@ -63,6 +65,8 @@ export default async function DashboardPage() {
 
   return (
     <div className="flex max-w-[1480px] flex-col gap-[18px] px-[26px] pb-8 pt-[22px]">
+      <EmergencyBanner events={emergencies} />
+
       {alertClient && (
         <AlertBanner
           clientId={alertClient.id}

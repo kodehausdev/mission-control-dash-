@@ -1,8 +1,9 @@
 import { requireOperator } from "@/lib/server/operator";
 import { checkServices, incidentBars24h, type ServiceState } from "@/lib/server/health";
-import { todayCounters } from "@/lib/server/activity";
+import { recentEmergencies, todayCounters } from "@/lib/server/activity";
 import { listClients } from "@/lib/server/clients";
 import { Card, PageHeader } from "@/components/ui";
+import { timeAgo } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -15,11 +16,13 @@ const STATE_COLOR: Record<ServiceState, { dot: string; text: string; border: str
 
 export default async function AiHealthPage() {
   await requireOperator();
-  const [services, incidents, today, clients] = await Promise.all([
+  const [services, incidents, today, clients, emergencies7d, emergencies24h] = await Promise.all([
     checkServices(),
     incidentBars24h(),
     todayCounters(),
     listClients(),
+    recentEmergencies(24 * 7),
+    recentEmergencies(24),
   ]);
 
   const worst = services.reduce<"ok" | "degraded" | "down">((acc, s) => {
@@ -101,7 +104,7 @@ export default async function AiHealthPage() {
         })}
       </div>
 
-      <div className="grid grid-cols-[1fr_1fr_1.4fr] items-stretch gap-[14px]">
+      <div className="grid grid-cols-3 gap-[10px]">
         <Card className="px-4 py-[15px]">
           <div className="text-[13px] font-semibold">Events today</div>
           <div className="mt-[10px] font-mono text-2xl font-semibold">
@@ -130,11 +133,32 @@ export default async function AiHealthPage() {
           )}
         </Card>
 
+        <Card
+          className={`px-4 py-[15px] ${emergencies24h.length > 0 ? "!border-red/30" : ""}`}
+        >
+          <div className="text-[13px] font-semibold">Emergency redirects</div>
+          <div
+            className={`mt-[10px] font-mono text-2xl font-semibold ${
+              emergencies24h.length > 0 ? "text-red" : "text-green"
+            }`}
+          >
+            {emergencies24h.length}
+          </div>
+          <div className="mt-[3px] text-[11.5px] text-muted">
+            {emergencies7d.length} in the last 7 days
+            {emergencies24h.length > 0
+              ? ` · latest ${timeAgo(emergencies24h[0].atIso)}`
+              : " · last 24h"}
+          </div>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 gap-[14px]">
         <Card className="px-4 py-[15px]">
           <div className="flex justify-between">
-            <span className="text-[13px] font-semibold">Incidents · last 24h</span>
+            <span className="text-[13px] font-semibold">Compliance incidents · last 24h</span>
             <span className="text-[11px] text-muted">
-              {incidents.total} total · guardrail, emergency, cancellations
+              {incidents.total} total · guardrail intercepts + emergency redirects
             </span>
           </div>
           <div className="mt-[14px] flex h-16 items-end gap-1">

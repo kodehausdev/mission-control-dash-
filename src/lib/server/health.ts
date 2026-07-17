@@ -127,7 +127,12 @@ export interface HourBucket {
   count: number;
 }
 
-/** Guardrail + emergency + cancellation events per hour, last 24h. */
+/**
+ * Compliance/safety incidents per hour, last 24h — guardrail intercepts and
+ * emergency redirects. Cancellations are a routine business event, not an
+ * incident, so they're deliberately excluded here (emergencies get their
+ * own dedicated stat instead of being folded into this generic chart).
+ */
 export async function incidentBars24h(): Promise<{ bars: HourBucket[]; total: number }> {
   const admin = supabaseAdmin();
   const bars: HourBucket[] = Array.from({ length: 24 }, (_, i) => ({ hour: i, count: 0 }));
@@ -138,7 +143,7 @@ export async function incidentBars24h(): Promise<{ bars: HourBucket[]; total: nu
     .from("audit_events")
     .select("type, created_at")
     .gte("created_at", since)
-    .in("type", ["guardrail.redacted", "emergency.detected", "booking.cancelled"])
+    .in("type", ["guardrail.redacted", "emergency.detected"])
     .limit(5000);
 
   let total = 0;

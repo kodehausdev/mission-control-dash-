@@ -60,7 +60,9 @@ export function describeEvent(e: AuditEventRow): { text: string; tone: Tone } {
     case "booking.cancelled": {
       const what = str(d.test_type) ?? "appointment";
       const when = [str(d.date), str(d.time_slot)].filter(Boolean).join(" · ");
-      return { text: `cancelled ${what}${when ? ` — ${when}` : ""}`, tone: "red" };
+      // Routine business event, not urgent — "red" is reserved for things
+      // that actually need attention (emergency redirects, guardrail hits).
+      return { text: `cancelled ${what}${when ? ` — ${when}` : ""}`, tone: "amber" };
     }
     case "call.answered":
       return {
@@ -88,7 +90,7 @@ function outcomeOf(e: AuditEventRow): { outcome: string; tone: Tone; intent: str
     case "booking.confirmed":
       return { outcome: "Booked", tone: "green", intent: "Booking" };
     case "booking.cancelled":
-      return { outcome: "Cancelled", tone: "red", intent: "Cancellation" };
+      return { outcome: "Cancelled", tone: "amber", intent: "Cancellation" };
     case "call.answered":
       return { outcome: "Answered", tone: "purple", intent: "Inbound call" };
     case "guardrail.redacted":
@@ -168,6 +170,45 @@ export async function listConversations(
       data: d,
     };
   });
+}
+
+export interface EmergencyEvent {
+  id: number;
+  tenantId: string | null;
+  tenantName: string;
+  phoneTail: string | null;
+  summary: string;
+  atIso: string;
+}
+
+/**
+ * Emergency 911/ER redirects — the single most serious thing the engine can
+ * do, and the only event type that gets its own dedicated query instead of
+ * living inside the generic feed. Used for the Dashboard banner and the AI
+ * Health counter.
+ */
+export async function recentEmergencies(hours = 24): Promise<EmergencyEvent[]> {
+  const admin = supabaseAdmin();
+  if (!admin) return [];
+  const since = new Date(Date.now() - hours * 3600_000).toISOString();
+  const [{ data }, names] = await Promise.all([
+    admin
+      .from("audit_events")
+      .select("id, tenant_id, phone_tail, data, created_at")
+      .eq("type", "emergency.detected")
+      .gte("created_at", since)
+      .order("id", { ascending: false })
+      .limit(50),
+    tenantNames(),
+  ]);
+  return (data ?? []).map((e) => ({
+    id: e.id,
+    tenantId: e.tenant_id,
+    tenantName: e.tenant_id ? (names.get(e.tenant_id) ?? e.tenant_id) : "Unknown",
+    phoneTail: e.phone_tail,
+    summary: str((e.data as Record<string, unknown> | null)?.summary) ?? "Emergency redirect fired.",
+    atIso: e.created_at,
+  }));
 }
 
 export interface TodayCounters {
