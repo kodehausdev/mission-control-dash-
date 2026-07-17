@@ -5,6 +5,7 @@ import { getClient } from "@/lib/server/clients";
 import { getCustomerBilling } from "@/lib/server/billing";
 import { tenantStats, upcomingAppointments } from "@/lib/server/appointments";
 import { listConversations } from "@/lib/server/activity";
+import { getOptOuts } from "@/lib/server/optouts";
 import { engineHealthy } from "@/lib/server/engine";
 import {
   Badge,
@@ -40,12 +41,13 @@ export default async function ClientProfilePage({
   const client = await getClient(decodeURIComponent(id));
   if (!client) notFound();
 
-  const [stats, bookings, convos, customerBilling, engineUp] = await Promise.all([
+  const [stats, bookings, convos, customerBilling, engineUp, optOuts] = await Promise.all([
     tenantStats(client.id),
     upcomingAppointments(client.id, 3),
     listConversations(4, { tenantId: client.id }),
     getCustomerBilling(client.stripeCustomerId, client.stripeSubscriptionId),
     engineHealthy(),
+    getOptOuts(client.id),
   ]);
 
   const hours =
@@ -284,6 +286,17 @@ export default async function ClientProfilePage({
                 ? `${stats.guardrails30d} guardrail intercept${stats.guardrails30d === 1 ? "" : "s"} in the last 30 days.`
                 : "No guardrail intercepts in the last 30 days."}
             </div>
+            <div className="mt-3 flex items-center justify-between border-t border-white/4 pt-3 text-xs">
+              <span className="text-muted">TCPA opt-outs (STOP)</span>
+              <span className={optOuts.count > 0 ? "font-mono text-amber" : "font-mono text-soft"}>
+                {optOuts.count}
+              </span>
+            </div>
+            {optOuts.recent.length > 0 && (
+              <div className="mt-[6px] text-[11px] leading-[1.6] text-faint">
+                Suppressed: {optOuts.recent.map((o) => `··${o.phoneTail}`).join(", ")}
+              </div>
+            )}
           </Card>
         </div>
       </div>
