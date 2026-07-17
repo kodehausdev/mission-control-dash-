@@ -1,16 +1,20 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
 import { timeAgo } from "@/lib/format";
 import type { EmergencyEvent } from "@/lib/server/activity";
 
 /**
- * Deliberately NOT dismissible (unlike the amber health-score AlertBanner) —
- * a 911/ER redirect is the most serious thing the engine can do, and it
- * shouldn't be possible to click it away and forget it happened. Shows every
- * emergency in the window, not just the latest, since each one is a real
- * caller who may need a human follow-up.
+ * Dismissible per-session (client-side state only, same as the amber
+ * health-score AlertBanner) — the underlying emergency.detected event stays
+ * in the audit trail and on AI Health/Conversations regardless, this only
+ * clears the Dashboard banner so it doesn't sit there once it's been seen
+ * and handled.
  */
 export function EmergencyBanner({ events }: { events: EmergencyEvent[] }) {
-  if (events.length === 0) return null;
+  const [dismissed, setDismissed] = useState(false);
+  if (events.length === 0 || dismissed) return null;
 
   return (
     <div className="flex flex-col gap-2 rounded-[10px] border border-red/35 bg-red/10 px-[14px] py-[12px]">
@@ -21,6 +25,14 @@ export function EmergencyBanner({ events }: { events: EmergencyEvent[] }) {
             ? "Emergency redirect fired in the last 24h"
             : `${events.length} emergency redirects fired in the last 24h`}
         </span>
+        <span className="flex-1" />
+        <button
+          onClick={() => setDismissed(true)}
+          title="Dismiss"
+          className="cursor-pointer px-1 text-[14px] text-red-soft hover:text-red"
+        >
+          ×
+        </button>
       </div>
       <div className="flex flex-col gap-[6px] pl-[18px]">
         {events.slice(0, 4).map((e) => (
