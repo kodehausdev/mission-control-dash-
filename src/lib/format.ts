@@ -14,6 +14,20 @@ export function moneyExact(cents: number | null | undefined): string {
   return `$${(cents / 100).toFixed(2)}`;
 }
 
+/** Display label for an audit_events/appointments channel value. */
+export function channelLabel(channel: string | null | undefined): string {
+  switch (channel) {
+    case "voice":
+      return "Voice";
+    case "whatsapp":
+      return "WhatsApp";
+    case "sms":
+      return "SMS";
+    default:
+      return "AI";
+  }
+}
+
 export function initials(name: string): string {
   return name
     .split(" ")

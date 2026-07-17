@@ -2,7 +2,7 @@ import Link from "next/link";
 import { requireOperator } from "@/lib/server/operator";
 import { listConversations } from "@/lib/server/activity";
 import { Badge } from "@/components/ui";
-import { timeAgo, timeShort } from "@/lib/format";
+import { channelLabel, timeAgo, timeShort } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -94,7 +94,7 @@ export default async function ConversationsPage({
               <div className="flex flex-none flex-col items-end gap-[3px]">
                 <Badge tone={cv.outcomeTone}>{cv.outcome}</Badge>
                 <span className="font-mono text-[10.5px] text-ghost">
-                  {cv.channel} · {timeShort(cv.atIso)}
+                  {channelLabel(cv.channel)} · {timeShort(cv.atIso)}
                 </span>
               </div>
             </Link>
@@ -116,7 +116,7 @@ export default async function ConversationsPage({
                   {selected.phoneTail ? `Caller ··${selected.phoneTail}` : "System event"}
                 </span>
                 <span className="text-[11px] text-faint">
-                  → {selected.tenantName} · {selected.channel}
+                  → {selected.tenantName} · {channelLabel(selected.channel)}
                 </span>
                 <span className="flex-1" />
                 <Badge tone={selected.outcomeTone}>{selected.outcome}</Badge>

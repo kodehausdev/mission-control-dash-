@@ -5,6 +5,7 @@
 
 import "server-only";
 import { supabaseAdmin } from "./supabase-admin";
+import { channelLabel } from "@/lib/format";
 import type { Tone } from "@/components/ui";
 
 export interface AuditEventRow {
@@ -46,14 +47,13 @@ const str = (v: unknown): string | null => (typeof v === "string" && v ? v : nul
 /** One-line description per event type — only whitelisted fields. */
 export function describeEvent(e: AuditEventRow): { text: string; tone: Tone } {
   const d = e.data ?? {};
-  const channelLabel =
-    e.channel === "voice" ? "AI call" : e.channel === "whatsapp" ? "WhatsApp" : "AI";
+  const via = e.channel === "voice" ? "AI call" : channelLabel(e.channel);
   switch (e.type) {
     case "booking.confirmed": {
       const what = str(d.test_type) ?? "appointment";
       const when = [str(d.date), str(d.time_slot)].filter(Boolean).join(" · ");
       return {
-        text: `booked ${what}${when ? ` — ${when}` : ""} via ${channelLabel}`,
+        text: `booked ${what}${when ? ` — ${when}` : ""} via ${via}`,
         tone: "green",
       };
     }
@@ -64,11 +64,16 @@ export function describeEvent(e: AuditEventRow): { text: string; tone: Tone } {
       // that actually need attention (emergency redirects, guardrail hits).
       return { text: `cancelled ${what}${when ? ` — ${when}` : ""}`, tone: "amber" };
     }
-    case "call.answered":
-      return {
-        text: `AI answered a ${e.channel ?? "voice"} call${e.phone_tail ? ` (··${e.phone_tail})` : ""}`,
-        tone: "purple",
-      };
+    case "call.answered": {
+      const tail = e.phone_tail ? ` (··${e.phone_tail})` : "";
+      const text =
+        e.channel === "sms"
+          ? `AI answered an SMS text${tail}`
+          : e.channel === "whatsapp"
+            ? `AI answered a WhatsApp message${tail}`
+            : `AI answered a voice call${tail}`;
+      return { text, tone: "purple" };
+    }
     case "guardrail.redacted":
       return {
         text: `compliance guardrail intercepted a ${str(d.tool) ?? "model"} call`,
